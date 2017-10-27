@@ -1,0 +1,15 @@
+* MergeTree
+
+The MergeTree is a datastructure used to show how a commit is integrated into the master branch of a repository.
+
+This implementation operates on the Linux repository and the data generated for [[https://cregit.linuxsources.org/][cregit]].
+It adds a new table pathtomerge, with the following schema:
+
+| Column Name | Type     | Description                                  |
+|-------------+----------+----------------------------------------------|
+| cid         | char(40) | Commit hash                                  |
+| mnext       | char(40) | Next commit on the way to the master branch  |
+| mdist       | int      | Hops from master branch                      |
+| mnextmerge  | char(40) | Next merge on path to the master branch      |
+| mcidlinus   | char(40) | The integrating merge into the master branch |
+| mwhen       | text     | The date when the commit was merged          |
