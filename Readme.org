@@ -13,3 +13,70 @@ It adds a new table pathtomerge, with the following schema:
 | mnextmerge  | char(40) | Next merge on path to the master branch      |
 | mcidlinus   | char(40) | The integrating merge into the master branch |
 | mwhen       | text     | The date when the commit was merged          |
+
+
+* Cregit
+
+Cregit is a project designed to show who is contributing code to the kernel. ~git blame~ shows some, but only at the line-level. Cregit digs deeper, breaking the patch down to the token level, giving a much finer-grained account of the changes being made.
+
+This implementation of the MergeTree uses the database generated for Cregit to provide information on the merge trees. Cregit uses the ~slickGitLog~ component to generate the database.
+
+The generated database produces 4 tables:
+
+- commits
+- parents
+- logs
+- footers
+
+** Commits
+
+Commits contains the metadata for each commit in the repository.
+
+| Column Name | Type     | Description                                                   |
+|-------------+----------+---------------------------------------------------------------|
+| cid         | char(40) | Commit hash                                                   |
+| autname     | text     | Author's name                                                 |
+| autemail    | text     | Author's email                                                |
+| autdate     | text     | Date commit was authored 'year-month-day hour:minute:second'  |
+| comname     | text     | Committer's name                                              |
+| comemail    | text     | Committer's email                                             |
+| comdate     | text     | Date commit was committed 'year-month-day hour:minute:second' |
+| summary     | text     | Commit log summary                                            |
+| ismerge     | boolean  | Is commit a merge commit?                                     |
+
+
+** Parents
+
+Contains the repository graph structure. This is the main table used for generating the merge trees.
+
+| Column Name | Type     | Description          |
+|-------------+----------+----------------------|
+| cid         | char(40) | Commit hash          |
+| idx         | integer  | ???                  |
+| parent      | char(40) | Parent's commit hash |
+
+~idx~ is necessary for the primary key since some merges merge the same commit twice. It's weird and doesn't make any sense, but it happens.
+
+** logs
+
+Contains the information about the logs.
+
+| Column Name | Type     | Description                 |
+|-------------+----------+-----------------------------|
+| cid         | char(40) | Commit hash                 |
+| log         | text     | The full commit log message |
+
+This is kept as a separate table from ~commits~ since some commit messages are very long.
+
+** footers
+
+Contains information on who is signing off on commits.
+
+| Column Name | Type     | Description                           |
+|-------------+----------+---------------------------------------|
+| cid         | char(40) | Commit hash                           |
+| idx         | integer  | ???                                   |
+| key         | text     | The type of information in the footer |
+| value       | text     | The actual information                |
+
+An example of a ~key~ might be: "Signed-off-by" and the ~value~ might be "Linus Torvalds <torvalds@linux-foundation.org>".
