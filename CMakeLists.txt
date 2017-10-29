@@ -1,0 +1,33 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+# Evan Wilde (C) 2017
+
+PROJECT(mergetree)
+
+# === [System Information] ===
+MESSAGE(STATUS "CMake Version: ${CMAKE_VERSION}")
+MESSAGE(STATUS "Building On: ${CMAKE_SYSTEM}")
+MESSAGE(STATUS "Build Compilers: C ${CMAKE_C_COMPILER_ID}, CXX ${CMAKE_CXX_COMPILER_ID}")
+
+# === [Setup variables] ===
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}")
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}")
+
+# === [Compiler Support] ===
+# TODO: This is for Linux, test/fix on other platforms
+
+IF("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR
+    "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+  list(APPEND CXX_COMPILER_FLAGS "-std=c++17")
+  list(APPEND CXX_DEBUG_COMPILER_FLAGS "-DDEBUG -Wall -Wextra")
+  list(APPEND CXX_RELEASE_COMPILER_FLAGS "-O2")
+ENDIF()
+
+# === [Components] ===
+ADD_SUBDIRECTORY("${CMAKE_SOURCE_DIR}/src/")
+
+# === [Build] ===
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/")
+ADD_EXECUTABLE(${CMAKE_PROJECT_NAME} ${PROJECT_SOURCE_LIST})
+
+# === [Linking] ===
+LINK_DIRECTORIES("/usr/lib")
