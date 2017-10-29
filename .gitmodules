@@ -1,0 +1,3 @@
+[submodule "cregit"]
+	path = cregit
+	url = github.com:cregit/cregit
