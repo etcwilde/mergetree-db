@@ -44,18 +44,15 @@ Commits contains the metadata for each commit in the repository.
 | summary     | text     | Commit log summary                                            |
 | ismerge     | boolean  | Is commit a merge commit?                                     |
 
-
 ** Parents
 
 Contains the repository graph structure. This is the main table used for generating the merge trees.
 
-| Column Name | Type     | Description          |
-|-------------+----------+----------------------|
-| cid         | char(40) | Commit hash          |
-| idx         | integer  | ???                  |
-| parent      | char(40) | Parent's commit hash |
-
-~idx~ is necessary for the primary key since some merges merge the same commit twice. It's weird and doesn't make any sense, but it happens.
+| Column Name | Type     | Description             |
+|-------------+----------+-------------------------|
+| cid         | char(40) | Commit hash             |
+| idx         | integer  | Order of commit parents |
+| parent      | char(40) | Parent's commit hash    |
 
 ** logs
 
@@ -75,8 +72,10 @@ Contains information on who is signing off on commits.
 | Column Name | Type     | Description                           |
 |-------------+----------+---------------------------------------|
 | cid         | char(40) | Commit hash                           |
-| idx         | integer  | ???                                   |
+| idx         | integer  | Order of comments                     |
 | key         | text     | The type of information in the footer |
 | value       | text     | The actual information                |
 
 An example of a ~key~ might be: "Signed-off-by" and the ~value~ might be "Linus Torvalds <torvalds@linux-foundation.org>".
+
+idx is used when multiple (cid, key) pairs are the same. This happens when multiple people sign off on a commit, for example.
