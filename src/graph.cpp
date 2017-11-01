@@ -1,7 +1,5 @@
 #include "graph.hpp"
 
-#include <iostream>
-
 std::set<std::string> computeInMaster(std::string const & HEAD, SqliteDB & db) {
 
   std::set<std::string> master_commits;
@@ -36,8 +34,16 @@ void DiGraph::add(std::string const & from, std::string const & to) {
   }
 }
 
+void DiGraph::add(std::string const & from) {
+  if (_edges.count(from) == 0) _edges.insert({from, {{}, {}}});
+}
+
 std::vector<std::string> const & DiGraph::getParents(std::string const & node) const {
   return std::get<0>(_edges.at(node));
+}
+
+bool DiGraph::contains(std::string const & node) const {
+  return _edges.count(node) != 0;
 }
 
 template <size_t N>

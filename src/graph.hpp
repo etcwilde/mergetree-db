@@ -5,7 +5,7 @@
 #define MERGE_TREE_HPP
 
 #include <iterator>
-#include <map>
+#include <unordered_map>
 #include <set>
 #include <vector>
 
@@ -35,6 +35,13 @@ public:
   void add(std::string const & from, std::string const & to);
 
   /**
+   * Add node to graph
+   *
+   * node: empty node with no parents ☹
+   */
+  void add(std::string const & node);
+
+  /**
    * Gets the parents (to nodes) of a given node (hash)
    *
    * node: Hash of originating commit
@@ -43,6 +50,7 @@ public:
    */
   std::vector<std::string> const & getParents(std::string const & node) const;
 
+  bool contains(std::string const & node) const;
 
   /**
    * Get the N'th parent
@@ -69,7 +77,9 @@ public:
    */
   std::string const & getFirstParent(std::string const & node) const;
 
+
+  inline size_t nodes() const { return _edges.size(); }
 private:
-  std::map<std::string, std::pair<std::vector<std::string>, std::set<std::string>>> _edges;
+  std::unordered_map<std::string, std::pair<std::vector<std::string>, std::set<std::string>>> _edges;
 };
 #endif
