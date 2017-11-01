@@ -16,9 +16,21 @@ public:
   SqliteDB(std::string const & fname);
   ~SqliteDB();
 
+  // prepares only a single statement
+  size_t prepare(std::string const & query);
+
+  void bind(size_t stmt_handle, int p, std::string const & text);
+  void bind(size_t stmt_handle, int p, int32_t value);
+  void bind(size_t stmt_handle, int p, int64_t value);
+  void bind(size_t stmt_handle, int p, double value);
+
+  std::vector<std::vector<std::string>> query(size_t stmt_handle);
   std::vector<std::vector<std::string>> query(std::string const & query);
 
 private:
   sqlite3 * mDb {nullptr};
+
+  std::vector<sqlite3_stmt*> _stmts;
+
 };
 #endif
