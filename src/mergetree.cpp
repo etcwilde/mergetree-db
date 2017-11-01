@@ -6,6 +6,9 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <queue>
+#include <unordered_map>
+#include <set>
 
 #include "sqlite3.hpp"
 #include "graph.hpp"
@@ -17,6 +20,44 @@ DiGraph buildDAG(SqliteDB & db) {
             return left.at(2) < right.at(2); });
   for (auto row : parents) { dag.add(row.at(0), row.at(1)); dag.add(row.at(1)); }
   return dag;
+}
+
+DiGraph Phase1(DiGraph const & dag, std::string const & HEAD, std::unordered_map<std::string, unsigned int> & depthMap) {
+  DiGraph tree;
+  std::queue<std::string> Q;
+  int openBranches {0};
+  std::set<std::string> visited;
+
+  tree.add(HEAD);
+  Q.push(HEAD);
+
+  depthMap.insert({HEAD, 0});
+  do {
+    std::string cur;
+    std::vector<std::string> parents;
+    cur = Q.front(); Q.pop();
+
+    parents = dag.getParents(cur); // Error here. We hit the end?
+    openBranches += parents.size() - 1;
+    for (size_t index {0}; index < parents.size(); ++index) {
+      auto parent = parents.at(index);
+
+      if (depthMap.count(parent) == 0) {
+        depthMap.insert({parent, depthMap.at(cur) + index});
+      } else if (depthMap.at(cur) > depthMap.at(parent)) {
+        openBranches -= 1;
+      } else if (depthMap.at(cur) < depthMap.at(parent)) {
+        openBranches -= 1;
+        depthMap.at(parent) = depthMap.at(cur);
+      }
+      tree.add(parent, cur);
+      if (visited.count(parent) == 0) {
+        Q.push(parent);
+        visited.insert(parent);
+      }
+    }
+  } while (Q.size() && openBranches != 0);
+  return tree;
 }
 
 int main(int argc, char *argv[]) {
@@ -43,5 +84,6 @@ int main(int argc, char *argv[]) {
   {
     std::unordered_map<std::string, unsigned int> depths;
     auto DAG = buildDAG(db);
+    auto invertedDAG = Phase1(DAG, args.at(2), depths);
   }
 }
