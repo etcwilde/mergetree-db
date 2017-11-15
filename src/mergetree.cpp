@@ -30,18 +30,18 @@ DiGraph Phase1(DiGraph const & dag, std::string const & HEAD, std::unordered_map
 
   tree.add(HEAD);
   Q.push(HEAD);
-
+  visited.insert(HEAD);
   depthMap.insert({HEAD, 0});
+
   do {
     std::string cur;
     std::vector<std::string> parents;
     cur = Q.front(); Q.pop();
 
-    parents = dag.getParents(cur); // Error here. We hit the end?
-    openBranches += parents.size() - 1;
+    parents = dag.getParents(cur);
+    openBranches = parents.empty() ? openBranches : openBranches + parents.size() - 1;
     for (size_t index {0}; index < parents.size(); ++index) {
       auto parent = parents.at(index);
-
       if (depthMap.count(parent) == 0) {
         depthMap.insert({parent, depthMap.at(cur) + index});
       } else if (depthMap.at(cur) > depthMap.at(parent)) {
