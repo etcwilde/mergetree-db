@@ -14,6 +14,26 @@
 #include "graph.hpp"
 #include "tree.hpp"
 
+void insertIntoDB(SqliteDB & db, Tree const & tree, std::unordered_map<std::string, unsigned int> const & depths) {
+
+  std::string const insert_query = "INSERT INTO pathtomerge(cid, next, depth, master) VALUES (?,?,?,?);";
+  auto insert_stmt = db.prepare(insert_query);
+
+  std::queue<std::string> toProcess;
+  toProcess.push(tree.getRoot());
+  while (toProcess.size() != 0) {
+    auto cur = toProcess.front(); toProcess.pop();
+    for (auto node : tree.getChildren(cur)) {
+      db.bind(insert_stmt, 0, node);
+      db.bind(insert_stmt, 1, cur);
+      db.bind(insert_stmt, 2, static_cast<int64_t>(depths.at(node)));
+      db.bind(insert_stmt, 3, tree.getRoot());
+      db.query(insert_stmt);
+      toProcess.push(node);
+    }
+  }
+}
+
 DiGraph buildDAG(SqliteDB & db) {
   DiGraph dag;
   auto parents = db.query("SELECT cid, parent, idx FROM parents;");
@@ -129,6 +149,15 @@ int main(int argc, char *argv[]) {
   std::cout << masterMerges.size() << " trees to compute" << std::endl;
   trees.reserve(masterMerges.size());
 
+  db.query("DROP TABLE IF EXISTS pathtomerge;");
+  db.query("CREATE TABLE IF NOT EXISTS pathtomerge("
+    "cid CHAR(40) PRIMARY KEY NOT NULL,"
+    "next CHAR(40),"
+    "depth int,"
+    "master CHAR(40)"
+    ");");
+
+
   {
     auto DAG = buildDAG(db);
     std::cout << "DAG nodes: " << DAG.nodes() << std::endl;
@@ -137,6 +166,7 @@ int main(int argc, char *argv[]) {
       std::unordered_map<std::string, unsigned int> depths;
       auto invertedDAG = Phase1(DAG, m, depths);
       trees.push_back(Phase2(DAG, invertedDAG, m, depths));
+      insertIntoDB(db, trees.back(), depths);
       std::cout << "Trees Computed: " << trees.size() << '/' << masterMerges.size() << '\r' << std::flush;
     }
     std::cout << std::endl;
