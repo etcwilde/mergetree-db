@@ -12,6 +12,7 @@
 
 #include "sqlite3.hpp"
 #include "graph.hpp"
+#include "tree.hpp"
 
 DiGraph buildDAG(SqliteDB & db) {
   DiGraph dag;
@@ -64,37 +65,42 @@ DiGraph Phase1(DiGraph const & dag, std::string const & HEAD, std::unordered_map
 // idag: inverted DAG
 // HEAD: Root of the tree
 // Depths: Mapping between node and depth
-DiGraph Phase2(DiGraph const & dag, DiGraph const & idag, std::string const & HEAD, std::unordered_map<std::string, unsigned int> depths) {
-  DiGraph tree;
+Tree Phase2(DiGraph const & dag, DiGraph const & idag, std::string const & HEAD, std::unordered_map<std::string, unsigned int> depths) {
+
+  auto getRealParent = [&depths, &idag](std::string const & p) -> std::string{
+      auto comparisonFunc = [&depths](std::string const & parent, std::string const & child) { return depths.at(parent) > depths.at(child); };
+      auto predFunc = [&depths, &p](std::string const & child) { return depths.at(p) >= depths.at(child); };
+      auto const & childrenList = idag.getParents(p); // Get parents
+
+      std::vector<std::string> filteredChildrenList;
+      filteredChildrenList.reserve(childrenList.size()); // filter children
+      std::copy_if(childrenList.begin(), childrenList.end(), std::back_inserter(filteredChildrenList), predFunc);
+
+      if (filteredChildrenList.empty()) return "";
+      else return *std::max_element(filteredChildrenList.begin(), filteredChildrenList.end(), comparisonFunc);
+  };
+
+  Tree tree(HEAD);
   std::queue<std::string> Q;
   tree.add(HEAD);
-  auto parents = dag.getParents(HEAD);
-  parents.erase(parents.begin());
-  auto comparisonFunc = [&depths](std::string const & parent, std::string const & child) {
-    return depths.at(parent) >= depths.at(child);
-  };
-  auto getRealParent = [&depths, &idag, &comparisonFunc](std::string const & p){
-    auto const & childrenList = idag.getParents(p);
-    std::vector<std::string> filteredChildrenList;
-    filteredChildrenList.reserve(childrenList.size()); // filter children
-    auto predFunc = [&depths, &p](std::string const & child) { return depths.at(p) >= depths.at(child); };
-    std::copy_if(childrenList.begin(), childrenList.end(), std::back_inserter(filteredChildrenList), predFunc);
-    // Reduce to min child
-    return *std::min_element(filteredChildrenList.begin(), filteredChildrenList.end(), comparisonFunc);
-  };
-  for (auto p : parents) {
-    auto realParent = getRealParent(p);
+  auto parentList = std::vector<std::string>(dag.getParents(HEAD));
+  parentList.erase(parentList.begin());
+  for (auto parent : parentList) {
+    auto realParent = getRealParent(parent);
     if (realParent == HEAD) {
-      tree.add(HEAD, p);
-      Q.push(p);
+      tree.add(HEAD, parent);
+      tree.add(parent);
+      Q.push(parent);
     }
   }
   while (Q.size()) {
     auto cur = Q.front(); Q.pop();
-    for (auto parent : dag.getParents(cur)) {
+    parentList = dag.getParents(cur);
+    for (auto parent : parentList) {
       auto realParent = getRealParent(parent);
       if (realParent == cur) {
-        tree.add(cur, realParent);
+        tree.add(cur, parent);
+        tree.add(parent);
         Q.push(parent);
       }
     }
@@ -117,32 +123,25 @@ int main(int argc, char *argv[]) {
   }
   std::cout << "Database: " << args.at(1) << " HEAD: " << args.at(2) << std::endl;
 
-  std::vector<DiGraph> trees;
-  std::set<std::string> masterMerges = computeInMaster(args.at(2), db);
+  std::vector<Tree> trees;
+  std::set<std::string> masterMerges { computeInMaster(args.at(2), db)};
 
   std::cout << masterMerges.size() << " trees to compute" << std::endl;
   trees.reserve(masterMerges.size());
 
   {
-    std::unordered_map<std::string, unsigned int> depths;
     auto DAG = buildDAG(db);
-    auto invertedDAG = Phase1(DAG, args.at(2), depths);
-
     std::cout << "DAG nodes: " << DAG.nodes() << std::endl;
 
     for (auto m : masterMerges) {
+      std::unordered_map<std::string, unsigned int> depths;
+      auto invertedDAG = Phase1(DAG, m, depths);
       trees.push_back(Phase2(DAG, invertedDAG, m, depths));
-      std::cout << '\r' << trees.size() << std::flush;
+      std::cout << "Trees Computed: " << trees.size() << '/' << masterMerges.size() << '\r' << std::flush;
     }
     std::cout << std::endl;
-
   }
 
   std::cout << "Trees computed: " << trees.size() << std::endl;
 
-  size_t sum{0};
-  for (auto t : trees) {
-    sum += t.nodes();
-  }
-  std::cout << "Nodes in trees: " << sum << std::endl;
 }
